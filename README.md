@@ -49,9 +49,9 @@ npm run build
 npm start
 ```
 
-服务器将在`HOST:PORT`上运行。
-MCP服务将在`HOST:PORT+1`上运行。
-MCP SSE地址为`HOST:PORT+1/mcp/sse`。
+- 服务器将在`HOST:PORT`上运行。
+- MCP服务将在`HOST:PORT+1`上运行。
+- MCP SSE地址为`HOST:PORT+1/mcp/sse`。
 
 ## API接口
 
