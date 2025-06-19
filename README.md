@@ -12,19 +12,21 @@
 ## 安装
 
 ```bash
-# 先安装nodejs和npm
+# 1. 克隆仓库
+git clone https://github.com/Hcs66/writeathon-mcp.git
+cd writeathon-mcp-server
 
-# 确保使用Node.js 20+以上版本，若同时安装多个版本，可先安装nvm
-nvm use 20
+# 2. 安装nodejs
+# 确保使用Node.js 20+以上版本，若同时存在多个版本，可先安装nvm并切换
 
-# 安装依赖，请确保文件夹有读写权限
+# 安装依赖，确保文件夹有读写权限
 npm install
 ```
 
 ## 配置
 
 1. 复制`.env.example`文件为`.env.prod`
-2. 编辑`.env.prod`文件，填入你的Writeathon用户ID、集成Token（web→设置→集成）和MCP API密钥(自定义)
+2. 编辑`.env.prod`文件，填入你的Writeathon用户ID、集成Token（web→设置→集成）
 
 ```
 # API配置
@@ -35,9 +37,6 @@ WRITEATHON_TOKEN=your_integration_token_here
 # 服务器配置
 PORT=3000
 HOST=localhost
-
-# MCP配置
-MCP_API_KEY=your_mcp_api_key_here
 ```
 
 ## 运行
@@ -54,6 +53,23 @@ npm start
 - 服务器将在`HOST:PORT`上运行。
 - MCP服务将在`HOST:PORT+1`上运行。
 - MCP SSE地址为`HOST:PORT+1/mcp/sse`。
+
+## 在Claude/Trae等平台使用
+通过复制`mcp.json`内容手动创建MCP
+
+其中`HOST`和`PORT`为.env配置文件中的HOST和PORT+1，如HOST=localhost,PORT=3000，则url为`http://localhost:3001/mcp`
+
+```json
+{
+  "mcpServers": {
+    "writeathon": {
+      "type": "streamable-http",
+      "url": "http://HOST:PORT/mcp",
+      "note": "For Streamable HTTP connections, add this URL directly in your MCP Client"
+    }
+  }
+}
+```
 
 ## API接口
 
