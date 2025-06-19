@@ -12,17 +12,19 @@
 ## 安装
 
 ```bash
-# 确保使用Node.js 20
+# 先安装nodejs和npm
+
+# 确保使用Node.js 20+以上版本，若同时安装多个版本，可先安装nvm
 nvm use 20
 
-# 安装依赖
+# 安装依赖，请确保文件夹有读写权限
 npm install
 ```
 
 ## 配置
 
-1. 复制`.env.example`文件为`.env`
-2. 编辑`.env`文件，填入你的Writeathon用户ID、集成Token（web→设置→集成）和MCP API密钥
+1. 复制`.env.example`文件为`.env.prod`
+2. 编辑`.env.prod`文件，填入你的Writeathon用户ID、集成Token（web→设置→集成）和MCP API密钥(自定义)
 
 ```
 # API配置
