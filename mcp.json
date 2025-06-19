@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "writeathon": {
+      "type": "streamable-http",
+      "url": "http://HOST:PORT/mcp",
+      "note": "For Streamable HTTP connections, add this URL directly in your MCP Client"
+    }
+  }
+}
