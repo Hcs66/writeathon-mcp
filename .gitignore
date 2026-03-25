@@ -4,3 +4,4 @@ dist
 package-lock.json
 .env.prod
 .env.dev
+ai_input/resources

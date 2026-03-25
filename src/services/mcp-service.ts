@@ -54,90 +54,129 @@ export class WriteathonMCPService {
    * 配置MCP资源
    */
   private configureResources(): void {
-    // 用户信息资源
     this.server.resource("user", "user://me", async (uri) => {
-      const response = await this.apiClient.getMe();
-      if (!response.success || !response.data) {
-        throw new Error("获取用户信息失败");
+      try {
+        const response = await this.apiClient.getMe();
+        if (!response.success || !response.data) {
+          throw new Error(response.message || "获取用户信息失败");
+        }
+        return {
+          contents: [
+            {
+              uri: uri.href,
+              text: JSON.stringify(response.data, null, 2),
+            },
+          ],
+        };
+      } catch (error) {
+        throw new Error(`获取用户信息失败: ${error instanceof Error ? error.message : String(error)}`);
       }
-      return {
-        contents: [
-          {
-            uri: uri.href,
-            text: JSON.stringify(response.data, null, 2),
-          },
-        ],
-      };
     });
 
-    // 最近卡片列表资源
     this.server.resource(
       "recent-cards",
       new ResourceTemplate(
-        "recent-cards://exclude_date_title={exclude_date_title}",
+        "recent-cards://list?exclude_date_title={exclude_date_title}&space={space}",
         {
           list: undefined,
         }
       ),
       async (uri, params) => {
-        const excludeDateTitle = params.exclude_date_title === "true";
+        try {
+          const excludeDateTitle =
+            (Array.isArray(params.exclude_date_title)
+              ? params.exclude_date_title[0]
+              : params.exclude_date_title) === "true";
+          const space = params.space
+            ? Array.isArray(params.space)
+              ? params.space[0]
+              : params.space
+            : undefined;
 
-        const response = await this.apiClient.getRecentCards({
-          exclude_date_title: excludeDateTitle,
-        });
-        if (!response.success || !response.data) {
-          throw new Error("获取最近卡片列表失败");
+          const response = await this.apiClient.getRecentCards({
+            exclude_date_title: excludeDateTitle,
+            space,
+          });
+          if (!response.success || !response.data) {
+            throw new Error(response.message || "获取最近卡片列表失败");
+          }
+          return {
+            contents: [
+              {
+                uri: uri.href,
+                text: JSON.stringify(response.data, null, 2),
+              },
+            ],
+          };
+        } catch (error) {
+          throw new Error(`获取最近卡片列表失败: ${error instanceof Error ? error.message : String(error)}`);
         }
-        return {
-          contents: [
-            {
-              uri: uri.href,
-              text: JSON.stringify(response.data, null, 2),
-            },
-          ],
-        };
       }
     );
 
-    // 卡片资源
     this.server.resource(
       "card",
       new ResourceTemplate("cards://{id}", { list: undefined }),
       async (uri, { id }) => {
-        const response = await this.apiClient.getCard({
-          id: Array.isArray(id) ? id[0] : id,
-        });
-        if (!response.success || !response.data) {
-          throw new Error(`获取卡片失败: ${id}`);
+        try {
+          const cardId = Array.isArray(id) ? id[0] : id;
+          const response = await this.apiClient.getCard({
+            id: cardId,
+          });
+          if (!response.success || !response.data) {
+            throw new Error(response.message || `获取卡片失败: ${cardId}`);
+          }
+          return {
+            contents: [
+              {
+                uri: uri.href,
+                text: JSON.stringify(response.data, null, 2),
+              },
+            ],
+          };
+        } catch (error) {
+          throw new Error(`获取卡片失败: ${error instanceof Error ? error.message : String(error)}`);
         }
-        return {
-          contents: [
-            {
-              uri: uri.href,
-              text: JSON.stringify(response.data, null, 2),
-            },
-          ],
-        };
       }
     );
 
-    // 写作拾贝资源
     this.server.resource(
       "writing-pick",
       new ResourceTemplate("writing-pick://{type}?limit={limit}", {
         list: undefined,
       }),
       async (uri, { type, limit }) => {
-        const pickType = type || "all";
-        const pickLimit = limit
-          ? parseInt(Array.isArray(limit) ? limit[0] : limit, 10)
-          : 10;
-        const response = await this.apiClient.getWritingPick({
-          type: pickType as "all" | "page" | "card",
-          limit: pickLimit,
-        });
+        try {
+          const pickType = type || "all";
+          const pickLimit = limit
+            ? parseInt(Array.isArray(limit) ? limit[0] : limit, 10)
+            : 10;
+          const response = await this.apiClient.getWritingPick({
+            type: pickType as "all" | "page" | "card",
+            limit: pickLimit,
+          });
+          if (!response.success || !response.data) {
+            throw new Error(response.message || "获取写作拾贝失败");
+          }
+          return {
+            contents: [
+              {
+                uri: uri.href,
+                text: JSON.stringify(response.data, null, 2),
+              },
+            ],
+          };
+        } catch (error) {
+          throw new Error(`获取写作拾贝失败: ${error instanceof Error ? error.message : String(error)}`);
+        }
+      }
+    );
+
+    this.server.resource("spaces", "spaces://list", async (uri) => {
+      try {
+        const response = await this.apiClient.getSpaces();
         if (!response.success || !response.data) {
-          throw new Error("获取写作拾贝失败");
+          throw new Error(response.message || "获取空间列表失败");
         }
         return {
           contents: [
@@ -147,39 +186,111 @@ export class WriteathonMCPService {
             },
           ],
         };
+      } catch (error) {
+        throw new Error(
+          `获取空间列表失败: ${error instanceof Error ? error.message : String(error)}`
+        );
       }
-    );
+    });
   }
 
   /**
    * 配置MCP工具
    */
   private configureTools(): void {
-    // 创建卡片工具
+    const attachmentSchema = z.object({
+      type: z.enum(["link", "image"]),
+      title: z.string(),
+      url: z.string(),
+      excerpt: z.string().optional(),
+      from: z.string().optional(),
+      content: z.string().optional(),
+    });
+
     this.server.tool(
       "create-card",
       "创建卡片",
       {
-        title: z.string().optional(),
+        title: z.string().max(100).optional(),
         content: z.string().max(5000, "内容最大长度为5000个字符"),
+        space: z.string().optional(),
+        attachments: z.array(attachmentSchema).optional(),
       },
-      async ({ title, content }) => {
-        const response = await this.apiClient.createCard({ title, content });
-        if (!response.success) {
+      async ({ title, content, space, attachments }) => {
+        try {
+          const response = await this.apiClient.createCard({
+            title,
+            content,
+            space,
+            attachments,
+          });
+          if (!response.success) {
+            return {
+              content: [
+                { type: "text", text: `创建卡片失败: ${response.message}` },
+              ],
+              isError: true,
+            };
+          }
+          return {
+            content: [{ type: "text", text: "卡片创建成功" }],
+          };
+        } catch (error) {
           return {
             content: [
-              { type: "text", text: `创建卡片失败: ${response.message}` },
+              {
+                type: "text",
+                text: `创建卡片失败: ${error instanceof Error ? error.message : String(error)}`,
+              },
             ],
             isError: true,
           };
         }
-        return {
-          content: [{ type: "text", text: "卡片创建成功" }],
-        };
       }
     );
 
-    // 获取卡片工具
+    this.server.tool(
+      "extend-card",
+      "扩展卡片",
+      {
+        title: z.string().max(100).optional(),
+        content: z.string().max(5000, "内容最大长度为5000个字符"),
+        parent: z.string(),
+        attachments: z.array(attachmentSchema).optional(),
+      },
+      async ({ title, content, parent, attachments }) => {
+        try {
+          const response = await this.apiClient.extendCard({
+            title,
+            content,
+            parent,
+            attachments,
+          });
+          if (!response.success) {
+            return {
+              content: [
+                { type: "text", text: `扩展卡片失败: ${response.message}` },
+              ],
+              isError: true,
+            };
+          }
+          return {
+            content: [{ type: "text", text: "扩展卡片成功" }],
+          };
+        } catch (error) {
+          return {
+            content: [
+              {
+                type: "text",
+                text: `扩展卡片失败: ${error instanceof Error ? error.message : String(error)}`,
+              },
+            ],
+            isError: true,
+          };
+        }
+      }
+    );
+
     this.server.tool(
       "get-card",
       "获取卡片",
@@ -188,32 +299,86 @@ export class WriteathonMCPService {
         id: z.string().optional(),
       },
       async ({ title, id }) => {
-        if (!title && !id) {
-          return {
-            content: [{ type: "text", text: "请提供卡片标题或ID" }],
-            isError: true,
-          };
-        }
+        try {
+          if (!title && !id) {
+            return {
+              content: [{ type: "text", text: "请提供卡片标题或ID" }],
+              isError: true,
+            };
+          }
 
-        const response = await this.apiClient.getCard({ title, id });
-        if (!response.success || !response.data) {
+          const response = await this.apiClient.getCard({ title, id });
+          if (!response.success || !response.data) {
+            return {
+              content: [
+                { type: "text", text: `获取卡片失败: ${response.message}` },
+              ],
+              isError: true,
+            };
+          }
+
           return {
             content: [
-              { type: "text", text: `获取卡片失败: ${response.message}` },
+              { type: "text", text: JSON.stringify(response.data, null, 2) },
+            ],
+          };
+        } catch (error) {
+          return {
+            content: [
+              {
+                type: "text",
+                text: `获取卡片失败: ${error instanceof Error ? error.message : String(error)}`,
+              },
             ],
             isError: true,
           };
         }
-
-        return {
-          content: [
-            { type: "text", text: JSON.stringify(response.data, null, 2) },
-          ],
-        };
       }
     );
 
-    // 获取写作拾贝工具
+    this.server.tool(
+      "get-recent-cards",
+      "获取最近更新的卡片列表",
+      {
+        exclude_date_title: z.boolean().optional(),
+        space: z.string().optional(),
+      },
+      async ({ exclude_date_title, space }) => {
+        try {
+          const response = await this.apiClient.getRecentCards({
+            exclude_date_title: exclude_date_title ?? false,
+            space,
+          });
+          if (!response.success || !response.data) {
+            return {
+              content: [
+                {
+                  type: "text",
+                  text: `获取最近卡片列表失败: ${response.message}`,
+                },
+              ],
+              isError: true,
+            };
+          }
+          return {
+            content: [
+              { type: "text", text: JSON.stringify(response.data, null, 2) },
+            ],
+          };
+        } catch (error) {
+          return {
+            content: [
+              {
+                type: "text",
+                text: `获取最近卡片列表失败: ${error instanceof Error ? error.message : String(error)}`,
+              },
+            ],
+            isError: true,
+          };
+        }
+      }
+    );
+
     this.server.tool(
       "get-writing-pick",
       "写作拾贝",
@@ -222,25 +387,115 @@ export class WriteathonMCPService {
         limit: z.number().min(1).max(10).optional(),
       },
       async ({ type, limit }) => {
-        const response = await this.apiClient.getWritingPick({
-          type: type || "all",
-          limit: limit || 10,
-        });
+        try {
+          const response = await this.apiClient.getWritingPick({
+            type: type || "all",
+            limit: limit || 10,
+          });
 
-        if (!response.success || !response.data) {
+          if (!response.success || !response.data) {
+            return {
+              content: [
+                { type: "text", text: `获取写作拾贝失败: ${response.message}` },
+              ],
+              isError: true,
+            };
+          }
+
           return {
             content: [
-              { type: "text", text: `获取写作拾贝失败: ${response.message}` },
+              { type: "text", text: JSON.stringify(response.data, null, 2) },
+            ],
+          };
+        } catch (error) {
+          return {
+            content: [
+              {
+                type: "text",
+                text: `获取写作拾贝失败: ${error instanceof Error ? error.message : String(error)}`,
+              },
             ],
             isError: true,
           };
         }
+      }
+    );
 
-        return {
-          content: [
-            { type: "text", text: JSON.stringify(response.data, null, 2) },
-          ],
-        };
+    this.server.tool(
+      "list-spaces",
+      "获取空间列表",
+      {},
+      async () => {
+        try {
+          const response = await this.apiClient.getSpaces();
+          if (!response.success || !response.data) {
+            return {
+              content: [
+                { type: "text", text: `获取空间列表失败: ${response.message}` },
+              ],
+              isError: true,
+            };
+          }
+          return {
+            content: [
+              { type: "text", text: JSON.stringify(response.data, null, 2) },
+            ],
+          };
+        } catch (error) {
+          return {
+            content: [
+              {
+                type: "text",
+                text: `获取空间列表失败: ${error instanceof Error ? error.message : String(error)}`,
+              },
+            ],
+            isError: true,
+          };
+        }
+      }
+    );
+
+    this.server.tool(
+      "search-cards",
+      "搜索卡片",
+      {
+        keyword: z.string(),
+        sortString: z.string().optional(),
+        space: z.string().optional(),
+        limit: z.number().min(1).max(50).optional(),
+      },
+      async ({ keyword, sortString, space, limit }) => {
+        try {
+          const response = await this.apiClient.searchCards({
+            keyword,
+            sortString,
+            space,
+            limit,
+          });
+          if (!response.success || !response.data) {
+            return {
+              content: [
+                { type: "text", text: `搜索卡片失败: ${response.message}` },
+              ],
+              isError: true,
+            };
+          }
+          return {
+            content: [
+              { type: "text", text: JSON.stringify(response.data, null, 2) },
+            ],
+          };
+        } catch (error) {
+          return {
+            content: [
+              {
+                type: "text",
+                text: `搜索卡片失败: ${error instanceof Error ? error.message : String(error)}`,
+              },
+            ],
+            isError: true,
+          };
+        }
       }
     );
   }
@@ -288,87 +543,84 @@ export class WriteathonMCPService {
     );
   }
 
-  // Reusable handler for GET and DELETE requests
   private handleSessionRequest = async (
     req: express.Request,
     res: express.Response
   ) => {
-    const sessionId = req.headers["mcp-session-id"] as string | undefined;
-    if (!sessionId || !this.transports[sessionId]) {
-      res.status(400).send("Invalid or missing session ID");
-      return;
-    }
+    try {
+      const sessionId = req.headers["mcp-session-id"] as string | undefined;
+      if (!sessionId || !this.transports[sessionId]) {
+        res.status(400).send("Invalid or missing session ID");
+        return;
+      }
 
-    const transport = this.transports[sessionId];
-    await transport.handleRequest(req, res);
+      const transport = this.transports[sessionId];
+      await transport.handleRequest(req, res);
+    } catch (error) {
+      console.error("Error handling session request:", error);
+      if (!res.headersSent) {
+        res.status(500).send("Internal server error");
+      }
+    }
   };
 
   /**
    * 配置Streamable HTTP 端点
    */
   private configureStreamableHTTPEndpoints(): void {
-    // Handle POST requests for client-to-server communication
     this.expressApp.post("/mcp", async (req, res) => {
-      // 验证Bearer Token
-      const authHeader = req.headers.authorization;
-      // const expectedToken = `Bearer ${config.mcp.apiKey}`;
+      try {
+        const sessionId = req.headers["mcp-session-id"] as string | undefined;
+        let transport: StreamableHTTPServerTransport;
 
-      // if (!authHeader || authHeader !== expectedToken) {
-      //   res.status(401).send("Unauthorized: Invalid API Key");
-      //   return;
-      // }
-      // Check for existing session ID
-      const sessionId = req.headers["mcp-session-id"] as string | undefined;
-      let transport: StreamableHTTPServerTransport;
+        if (sessionId && this.transports[sessionId]) {
+          transport = this.transports[sessionId];
+        } else if (!sessionId && isInitializeRequest(req.body)) {
+          transport = new StreamableHTTPServerTransport({
+            sessionIdGenerator: () => randomUUID(),
+            onsessioninitialized: (newSessionId) => {
+              this.transports[newSessionId] = transport;
+            },
+          });
 
-      if (sessionId && this.transports[sessionId]) {
-        // Reuse existing transport
-        transport = this.transports[sessionId];
-      } else if (!sessionId && isInitializeRequest(req.body)) {
-        // New initialization request
-        transport = new StreamableHTTPServerTransport({
-          sessionIdGenerator: () => randomUUID(),
-          onsessioninitialized: (sessionId) => {
-            // Store the transport by session ID
-            this.transports[sessionId] = transport;
-          },
-        });
+          transport.onclose = () => {
+            if (transport.sessionId) {
+              delete this.transports[transport.sessionId];
+            }
+          };
 
-        // Clean up transport when closed
-        transport.onclose = () => {
-          if (transport.sessionId) {
-            delete this.transports[transport.sessionId];
-          }
-        };
+          await this.server.connect(transport);
+        } else {
+          res.status(400).json({
+            jsonrpc: "2.0",
+            error: {
+              code: -32000,
+              message: "Bad Request: No valid session ID provided",
+            },
+            id: null,
+          });
+          return;
+        }
 
-        // ... set up server resources, tools, and prompts ...
-
-        // Connect to the MCP server
-        await this.server.connect(transport);
-      } else {
-        // Invalid request
-        res.status(400).json({
-          jsonrpc: "2.0",
-          error: {
-            code: -32000,
-            message: "Bad Request: No valid session ID provided",
-          },
-          id: null,
-        });
-        return;
+        await transport.handleRequest(req, res, req.body);
+      } catch (error) {
+        console.error("Error handling MCP request:", error);
+        if (!res.headersSent) {
+          res.status(500).json({
+            jsonrpc: "2.0",
+            error: {
+              code: -32603,
+              message: "Internal error",
+            },
+            id: null,
+          });
+        }
       }
-
-      // Handle the request
-      await transport.handleRequest(req, res, req.body);
     });
 
-    // Handle GET requests for server-to-client notifications via SSE
     this.expressApp.get("/mcp", this.handleSessionRequest);
-
-    // Handle DELETE requests for session termination
     this.expressApp.delete("/mcp", this.handleSessionRequest);
 
-    // 健康检查端点
     this.expressApp.get("/mcp/health", (_, res) => {
       res.status(200).json({ status: "ok" });
     });
