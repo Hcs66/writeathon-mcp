@@ -17,6 +17,30 @@ export interface Card {
   updated: Date;
 }
 
+export interface Attachment {
+  type: "link" | "image";
+  title: string;
+  url: string;
+  excerpt?: string;
+  from?: string;
+  content?: string;
+}
+
+export interface Space {
+  id: string;
+  title: string;
+  description?: string;
+  created: Date;
+  updated: Date;
+}
+
+export interface SearchCardItem {
+  title: string;
+  content: string;
+  parent?: string;
+  attachments?: string;
+}
+
 // 写作拾贝项目接口
 export interface WritingPickItem {
   id: string;
@@ -40,6 +64,22 @@ export interface ApiResponse<T> {
 export interface CreateCardRequest {
   title?: string;
   content: string;
+  space?: string;
+  attachments?: Attachment[] | string;
+}
+
+export interface ExtendCardRequest {
+  title?: string;
+  content: string;
+  parent: string;
+  attachments?: Attachment[] | string;
+}
+
+export interface SearchCardsRequest {
+  keyword: string;
+  sortString?: string;
+  space?: string;
+  limit?: number;
 }
 
 // 获取卡片请求接口
@@ -57,4 +97,5 @@ export interface WritingPickRequest {
 // 获取最近卡片请求接口
 export interface RecentCardsRequest {
   exclude_date_title?: boolean;
+  space?: string;
 }

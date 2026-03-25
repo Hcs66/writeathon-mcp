@@ -5,7 +5,9 @@ import { Router, Request, Response } from 'express';
 import { WriteathonApiClient } from '../services/api-client';
 import {
   CreateCardRequest,
+  ExtendCardRequest,
   GetCardRequest,
+  SearchCardsRequest,
   WritingPickRequest,
   RecentCardsRequest
 } from '../types';
@@ -68,6 +70,53 @@ router.post('/cards/get', async (req: Request, res: Response) => {
     res.status(response.success ? 200 : 400).json(response);
   } catch (error) {
     console.error('API路由 - 获取卡片失败:', error);
+    res.status(500).json({
+      success: false,
+      message: '服务器内部错误',
+      errorCode: 1000
+    });
+  }
+});
+
+// 扩展卡片
+router.post('/cards/extend', async (req: Request, res: Response) => {
+  try {
+    const extendRequest: ExtendCardRequest = req.body;
+    const response = await apiClient.extendCard(extendRequest);
+    res.status(response.success ? 200 : 400).json(response);
+  } catch (error) {
+    console.error('API路由 - 扩展卡片失败:', error);
+    res.status(500).json({
+      success: false,
+      message: '服务器内部错误',
+      errorCode: 1000
+    });
+  }
+});
+
+// 获取空间列表
+router.get('/spaces', async (_req: Request, res: Response) => {
+  try {
+    const response = await apiClient.getSpaces();
+    res.status(response.success ? 200 : 400).json(response);
+  } catch (error) {
+    console.error('API路由 - 获取空间列表失败:', error);
+    res.status(500).json({
+      success: false,
+      message: '服务器内部错误',
+      errorCode: 1000
+    });
+  }
+});
+
+// 搜索卡片
+router.post('/cards/search', async (req: Request, res: Response) => {
+  try {
+    const searchRequest: SearchCardsRequest = req.body;
+    const response = await apiClient.searchCards(searchRequest);
+    res.status(response.success ? 200 : 400).json(response);
+  } catch (error) {
+    console.error('API路由 - 搜索卡片失败:', error);
     res.status(500).json({
       success: false,
       message: '服务器内部错误',
