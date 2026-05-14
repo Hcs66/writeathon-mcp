@@ -215,14 +215,16 @@ export class WriteathonMCPService {
         content: z.string().max(5000, "内容最大长度为5000个字符"),
         space: z.string().optional(),
         attachments: z.array(attachmentSchema).optional(),
+        shareStatus: z.number().int().min(0).max(1).optional(),
       },
-      async ({ title, content, space, attachments }) => {
+      async ({ title, content, space, attachments, shareStatus }) => {
         try {
           const response = await this.apiClient.createCard({
             title,
             content,
             space,
             attachments,
+            shareStatus: shareStatus as 0 | 1 | undefined,
           });
           if (!response.success) {
             return {

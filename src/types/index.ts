@@ -66,6 +66,7 @@ export interface CreateCardRequest {
   content: string;
   space?: string;
   attachments?: Attachment[] | string;
+  shareStatus?: 0 | 1;
 }
 
 export interface ExtendCardRequest {
