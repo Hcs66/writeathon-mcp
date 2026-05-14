@@ -77,7 +77,7 @@ npm start
 服务器提供以下REST API接口：
 
 - `GET /api/me` - 获取用户信息
-- `POST /api/cards` - 创建卡片（支持space、attachments）
+- `POST /api/cards` - 创建卡片（支持space、attachments、shareStatus）
 - `POST /api/cards/extend` - 扩展卡片（支持attachments）
 - `GET /api/cards/recent` - 获取最近更新的卡片列表（支持space、exclude_date_title）
 - `POST /api/cards/get` - 获取卡片
@@ -96,7 +96,7 @@ npm start
   - `writing-pick://{type}?limit={limit}` - 写作拾贝
   - `spaces://list` - 空间列表
 - Tools
-  - `create-card` - 创建卡片（支持space、attachments）
+  - `create-card` - 创建卡片（支持space、attachments、shareStatus）
   - `extend-card` - 扩展卡片（支持attachments）
   - `get-card` - 获取卡片
   - `get-recent-cards` - 获取最近更新的卡片列表（支持space、exclude_date_title）
